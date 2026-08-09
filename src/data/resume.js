@@ -71,7 +71,7 @@ export const projects = [
       "A full-stack social network built solo: JWT auth, posts, follows, and real-time chat & notifications over WebSocket and gRPC.",
     tech: ["Golang", "Fiber v2", "Vue 3", "Quasar", "MongoDB", "WebSocket", "gRPC", "Docker", "Redis"],
     // TODO: replace with the repo URL and a real screenshot (e.g. /projects/social-chat-app.png in /public)
-    github: "https://github.com/nhancaon",
+    github: "https://github.com/nhancaon/Social-Chat-App",
     image: null,
   },
   {
@@ -82,7 +82,7 @@ export const projects = [
     description:
       "My part of a 3-person e-wallet team: a layered Spring Boot API, an AI chatbot & voice assistant (Gemini) for transfers and bill pay, plus a GitLab CI/CD pipeline shipping into a 3-node Kubernetes cluster with Velero backups.",
     tech: ["Spring Boot", "PostgreSQL", "Gemini LLM", "GitLab CI/CD", "Kubernetes", "Rancher", "Velero", "AWS EC2"],
-    github: "https://github.com/nhancaon",
+    github: "https://github.com/nhancaon/dnn-wallet",
     image: "/e-wallet-platform.png",
   },
   {
