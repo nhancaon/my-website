@@ -30,7 +30,7 @@ export const skillGroups = [
   },
   {
     title: "Data & Infra",
-    chips: ["MongoDB", "PostgreSQL", "Docker", "Kubernetes"],
+    chips: ["MongoDB", "PostgreSQL", "Docker", "Kubernetes", "Kafka", "Terraform"],
   },
   {
     title: "CI/CD & Tooling",
@@ -68,9 +68,8 @@ export const projects = [
     when: "2026",
     kind: "Personal Project",
     description:
-      "A full-stack social network built solo: JWT auth, posts, follows, and real-time chat & notifications over WebSocket and gRPC.",
-    tech: ["Golang", "Fiber v2", "Vue 3", "Quasar", "MongoDB", "WebSocket", "gRPC", "Docker", "Redis"],
-    // TODO: replace with the repo URL and a real screenshot (e.g. /projects/social-chat-app.png in /public)
+      "A full-stack social network built solo: JWT auth, posts, follows, and real-time chat & notifications fanned out over Kafka — deployed to a self-managed AWS EKS cluster with Terraform and ArgoCD.",
+    tech: ["Golang", "Fiber v2", "Vue 3", "Quasar", "MongoDB", "WebSocket", "Kafka", "Redis", "Docker", "Kubernetes", "Terraform"],
     github: "https://github.com/nhancaon/Social-Chat-App",
     image: null,
   },
@@ -100,22 +99,25 @@ export const projects = [
 
 export const caseStudies = {
   "social-chat-app": {
-    subtitle: "A solo-built real-time social network with a Go backend and a Vue frontend",
+    subtitle: "A solo-built real-time social network — Go backend, Vue frontend, Kafka-driven scaling, deployed to AWS EKS",
     role: "Solo Developer (Full-Stack)",
     timeline: "2026",
     teamSize: "Solo project",
     client: "Personal project",
-    // TODO: replace with a YouTube/Vimeo embed URL when the demo is ready
     video: null,
     about: [
-      "I wanted to see how far a single Go service could go — auth, a social graph, and real-time messaging — without reaching for a framework that hides the details.",
-      "The result pairs a Fiber-based API with a Vue 3 / Quasar frontend: sign up, post, follow people, and chat with them in real time, all self-hosted behind Docker Compose.",
-      "Building it solo meant every architecture call — how chat gets delivered, how the API gets documented — was mine to make and mine to live with later.",
+      "I wanted to see how far a single Go service could go — auth, a social graph, real-time messaging, and eventually a real cloud deployment — without reaching for a framework that hides the details.",
+      "The result pairs a Fiber-based API with a Vue 3 / Quasar frontend: sign up, post, follow people, and chat with them in real time. It started self-hosted behind Docker Compose and later moved onto a self-managed AWS EKS cluster, provisioned with Terraform and deployed through ArgoCD.",
+      "Building it solo meant every architecture call — how chat gets delivered, how the service scales, how the API gets documented — was mine to make and mine to live with later.",
     ],
     challenges: [
       {
         title: "Real-time without polling",
-        body: "Chat and notifications needed to feel instant, not refresh-and-check. Getting WebSocket connections and internal gRPC calls to stay in sync took more iteration than the plain REST side of the app.",
+        body: "Chat and notifications needed to feel instant, not refresh-and-check. Getting WebSocket connections to stay reliable under reconnects and auth checks took more iteration than the plain REST side of the app.",
+      },
+      {
+        title: "Scaling real-time delivery across nodes",
+        body: "Chat and notifications originally lived in separate services that called into the API over gRPC — fine with one instance of each, but it broke down the moment I wanted more than one backend replica: a message from a client on Pod A had no path to a client on Pod B without every pod knowing about every other pod.",
       },
       {
         title: "A social graph that stays fast",
@@ -129,26 +131,28 @@ export const caseStudies = {
     objectives: [
       {
         title: "Messages that arrive, not messages that wait",
-        body: "Deliver chat and notifications the instant they happen — WebSocket to the client, gRPC between internal services — instead of falling back to polling.",
+        body: "Deliver chat and notifications the instant they happen over WebSocket, backed by a Kafka fan-out so delivery never depends on which specific backend instance a client happens to be connected to.",
       },
       {
         title: "A feed that doesn't slow down with scale",
         body: "Model posts, follows, and interactions in MongoDB around the queries that actually run — a feed, a follower list — not just the entities on paper.",
       },
       {
-        title: "One command to run the whole stack",
-        body: "Containerize every service with Docker Compose and document the REST API in Swagger, so the project is reproducible without a setup guide.",
+        title: "From one command to a real cluster",
+        body: "Containerize every service with Docker Compose for local development, and provision a production-style AWS EKS deployment with Terraform and GitOps so the project isn't just runnable — it's deployable.",
       },
     ],
     approach: [
-      "I built the REST API and auth first, then layered WebSocket and gRPC on top once the core data model was solid, rather than designing for real-time from day one.",
+      "I built the REST API and auth first, then layered WebSocket and Kafka-based fan-out on top once the core data model was solid, rather than designing for real-time from day one.",
+      "When horizontal scaling became the goal, I replaced the original gRPC-based chat/notification services with a Kafka fan-out: every backend node publishes to and consumes from the same topic, so no node needs to know its peers exist — that's what lets Kubernetes' HPA add or remove replicas safely.",
       "Redis holds session and presence data so the WebSocket layer never has to hit MongoDB just to check who's online, keeping the chat path fast under load.",
+      "Infrastructure came last: Terraform provisions the EKS cluster, Rancher gives visibility into it, and ArgoCD syncs the deployed state from Git — so standing the cluster back up after tearing it down is a rerun, not a rebuild.",
       "I wrote the Swagger docs alongside the API instead of after it — a solo project only has one reviewer, future me, and future me needed the reference.",
     ],
     decisions: [
       {
-        title: "gRPC between services, WebSocket to clients",
-        body: "Browsers don't speak gRPC well, but it's a strong fit for service-to-service calls. Splitting the two — WebSocket outward, gRPC inward — let each side do the job it's actually good at.",
+        title: "Kafka fan-out over gRPC for cross-node delivery",
+        body: "gRPC calls between the API and dedicated chat/notification services worked with one instance of each, but couldn't scale horizontally — a message had no path to a client on a different pod. Kafka's publish/consume model let every backend instance stay in sync without knowing where its peers are, which is what actually makes the HPA usable.",
       },
       {
         title: "MongoDB over a relational database",
@@ -158,9 +162,13 @@ export const caseStudies = {
         title: "Redis for presence, not just caching",
         body: "Checking who's online by querying MongoDB on every WebSocket ping would add load for no reason. Redis's in-memory reads made presence checks cheap enough to run constantly.",
       },
+      {
+        title: "Terraform + ArgoCD over manual kubectl",
+        body: "Clicking through cluster setup by hand doesn't survive a second deployment. Provisioning with Terraform and deploying through ArgoCD's GitOps flow means both the infrastructure and the app's deployed state live in Git, not in whatever I remember typing last time.",
+      },
     ],
     results:
-      "The full stack — Go API, Vue frontend, MongoDB, Redis — comes up with a single docker compose up, and the REST API is documented in Swagger well enough that picking the project back up after a break doesn't mean re-reading the source first.",
+      "The full stack — Go API, Vue frontend, MongoDB, Redis, Kafka — runs locally with a single docker compose up, and the same backend now deploys to a self-managed AWS EKS cluster via Terraform and ArgoCD, with Rancher for cluster visibility. The Kafka fan-out means adding a second backend replica under Kubernetes' HPA doesn't require any code changes, and the REST API is documented in Swagger well enough that picking the project back up after a break doesn't mean re-reading the source first.",
   },
   "e-wallet-platform": {
     subtitle: "Backend architecture, AI features, and the delivery pipeline behind a cross-platform wallet app",
