@@ -44,11 +44,11 @@ export const experience = [
     title: "IT Fresher",
     company: "BambuUP",
     points: [
-      "Automated data management with Airtable, cutting manual work and boosting team efficiency.",
-      "Maintained a startup's Azure platform — shipped features, fixed data-flow bugs, and refactored for reliability.",
-      "Built marketing sites in React & Tailwind CSS; owned the domain, SSL, and Vercel deploys end-to-end.",
-      "Integrated LadiFlow with Drupal for seamless lead syncing into a central customer database.",
-      "Key technical support for the Vietleap AI Accelerator program.",
+      "Automated data management workflows using Airtable, reducing manual tasks and improving team efficiency.",
+      "Maintained and enhanced a startup’s product platform on Azure, debugging data flow issues and refactoring code forreliability.",
+      "Built and deployed landing pages for marketing campaigns, handling domain, SSL, and Vercel deployment to launch campaigns quickly.",
+      "Used Claude to help build a LadiFlow integration automating Drupal-to-LadiPage data transfer, eliminating a recurring data - leakage risk from manual downloads.",
+      "Built an automated session-recording/transcription pipeline and a data sync to central storage for the Vietleap AI Accelerator program.",
     ],
   },
 ];
