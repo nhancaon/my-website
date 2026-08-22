@@ -71,7 +71,7 @@ export const projects = [
       "A full-stack social network built solo: JWT auth, posts, follows, and real-time chat & notifications fanned out over Kafka — deployed to a self-managed AWS EKS cluster with Terraform and ArgoCD.",
     tech: ["Golang", "Fiber v2", "Vue 3", "Quasar", "MongoDB", "WebSocket", "Kafka", "Redis", "Docker", "Kubernetes", "Terraform"],
     github: "https://github.com/nhancaon/Social-Chat-App",
-    image: "social-chat-app.png",
+    image: "/social-chat-app.png",
   },
   {
     slug: "e-wallet-platform",
