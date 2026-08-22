@@ -71,7 +71,7 @@ export const projects = [
       "A full-stack social network built solo: JWT auth, posts, follows, and real-time chat & notifications fanned out over Kafka — deployed to a self-managed AWS EKS cluster with Terraform and ArgoCD.",
     tech: ["Golang", "Fiber v2", "Vue 3", "Quasar", "MongoDB", "WebSocket", "Kafka", "Redis", "Docker", "Kubernetes", "Terraform"],
     github: "https://github.com/nhancaon/Social-Chat-App",
-    image: null,
+    image: "social-chat-app.png",
   },
   {
     slug: "e-wallet-platform",
@@ -96,19 +96,19 @@ export const projects = [
     image: "/fast-food-order-cli.png",
   },
 ];
-
 export const caseStudies = {
   "social-chat-app": {
-    subtitle: "A solo-built real-time social network — Go backend, Vue frontend, Kafka-driven scaling, deployed to AWS EKS",
+    subtitle: "A solo-built real-time social network — Go backend, Vue frontend, Kafka-driven scaling, and S3/Glacier-backed file storage, deployed to AWS EKS",
     role: "Solo Developer (Full-Stack)",
     timeline: "2026",
     teamSize: "Solo project",
     client: "Personal project",
-    video: null,
+    video: "https://www.youtube.com/embed/YGg2759lyOY",
     about: [
       "I wanted to see how far a single Go service could go — auth, a social graph, real-time messaging, and eventually a real cloud deployment — without reaching for a framework that hides the details.",
       "The result pairs a Fiber-based API with a Vue 3 / Quasar frontend: sign up, post, follow people, and chat with them in real time. It started self-hosted behind Docker Compose and later moved onto a self-managed AWS EKS cluster, provisioned with Terraform and deployed through ArgoCD.",
-      "Building it solo meant every architecture call — how chat gets delivered, how the service scales, how the API gets documented — was mine to make and mine to live with later.",
+      "A later phase added file storage — direct-to-S3 uploads with automatic archival to Glacier for anything nobody's touched in months, since paying full price to keep every file in \"hot\" storage forever doesn't hold up at scale.",
+      "Building it solo meant every architecture call — how chat gets delivered, how the service scales, how old files get cheaper to keep around — was mine to make and mine to live with later.",
     ],
     challenges: [
       {
@@ -122,6 +122,14 @@ export const caseStudies = {
       {
         title: "A social graph that stays fast",
         body: "Posts, likes, comments, and follows all touch overlapping documents. Once the test follow-graph passed a few hundred users, naive queries for a feed started showing their cost.",
+      },
+      {
+        title: "Storage that gets expensive if you let it",
+        body: "Every uploaded file defaults to \"hot\" storage priced for data people are actively reading — but most files, past the first week, are read by no one. Left alone, storage cost just climbs forever with no ceiling.",
+      },
+      {
+        title: "A Kafka cluster that silently never worked",
+        body: "Consumer groups started failing with \"Group Coordinator Not Available\" the moment backend pods restarted — after running fine for weeks. The actual cause was Kafka's own default replication factor for its internal offsets topic, which a single-broker cluster can never satisfy; long-lived connections had just been masking it until something forced a reconnect.",
       },
       {
         title: "No one to review the API but me",
@@ -138,6 +146,10 @@ export const caseStudies = {
         body: "Model posts, follows, and interactions in MongoDB around the queries that actually run — a feed, a follower list — not just the entities on paper.",
       },
       {
+        title: "Storage that doesn't cost the same forever",
+        body: "Move files nobody's touched in 90 days to S3 Glacier automatically, without making the rare case — someone needing an old file back — take more than a click and a short wait.",
+      },
+      {
         title: "From one command to a real cluster",
         body: "Containerize every service with Docker Compose for local development, and provision a production-style AWS EKS deployment with Terraform and GitOps so the project isn't just runnable — it's deployable.",
       },
@@ -146,7 +158,9 @@ export const caseStudies = {
       "I built the REST API and auth first, then layered WebSocket and Kafka-based fan-out on top once the core data model was solid, rather than designing for real-time from day one.",
       "When horizontal scaling became the goal, I replaced the original gRPC-based chat/notification services with a Kafka fan-out: every backend node publishes to and consumes from the same topic, so no node needs to know its peers exist — that's what lets Kubernetes' HPA add or remove replicas safely.",
       "Redis holds session and presence data so the WebSocket layer never has to hit MongoDB just to check who's online, keeping the chat path fast under load.",
+      "File uploads go straight from the browser to S3 through a presigned URL the backend signs but never sees the bytes behind; a daily Kubernetes CronJob reclassifies idle files to Glacier, and a second job polls for restore completion — since S3 never pushes that event on its own — publishing to the same Kafka topic chat notifications already use once a file's ready.",
       "Infrastructure came last: Terraform provisions the EKS cluster, Rancher gives visibility into it, and ArgoCD syncs the deployed state from Git — so standing the cluster back up after tearing it down is a rerun, not a rebuild.",
+      "For the file storage phase, I worked with Claude Code as an active collaborator rather than autocomplete — handing it real context (a raw Kafka log, an AWS console screenshot), directing the fix, and reviewing every diff before it landed. Each fix got verified against the live AWS environment, not just trusted from the log output.",
       "I wrote the Swagger docs alongside the API instead of after it — a solo project only has one reviewer, future me, and future me needed the reference.",
     ],
     decisions: [
@@ -163,12 +177,20 @@ export const caseStudies = {
         body: "Checking who's online by querying MongoDB on every WebSocket ping would add load for no reason. Redis's in-memory reads made presence checks cheap enough to run constantly.",
       },
       {
+        title: "Presigned S3 URLs over proxying uploads through the backend",
+        body: "Routing every file through the Go service to reach S3 would double the bandwidth and memory cost of every upload for no benefit. Signing a short-lived URL and letting the browser talk to S3 directly keeps the backend out of the data path entirely.",
+      },
+      {
+        title: "Kubernetes CronJobs over a standing worker service",
+        body: "Archival, trash cleanup, and restore polling are all periodic, not continuous — running a dedicated worker process for them would mean paying for idle compute most of the day. CronJobs reuse the exact same backend image with a different entrypoint flag, so there's no second codebase to maintain.",
+      },
+      {
         title: "Terraform + ArgoCD over manual kubectl",
         body: "Clicking through cluster setup by hand doesn't survive a second deployment. Provisioning with Terraform and deploying through ArgoCD's GitOps flow means both the infrastructure and the app's deployed state live in Git, not in whatever I remember typing last time.",
       },
     ],
     results:
-      "The full stack — Go API, Vue frontend, MongoDB, Redis, Kafka — runs locally with a single docker compose up, and the same backend now deploys to a self-managed AWS EKS cluster via Terraform and ArgoCD, with Rancher for cluster visibility. The Kafka fan-out means adding a second backend replica under Kubernetes' HPA doesn't require any code changes, and the REST API is documented in Swagger well enough that picking the project back up after a break doesn't mean re-reading the source first.",
+      "The full stack — Go API, Vue frontend, MongoDB, Redis, Kafka — runs locally with a single docker compose up, and the same backend now deploys to a self-managed AWS EKS cluster via Terraform and ArgoCD, with Rancher for cluster visibility. The Kafka fan-out means adding a second backend replica under Kubernetes' HPA doesn't require any code changes, and the REST API is documented in Swagger well enough that picking the project back up after a break doesn't mean re-reading the source first. A later pass added S3-backed file storage with automatic Glacier archival, cutting per-GB storage cost by roughly 80% for files nobody's actively using. Three real production issues surfaced and got fixed along the way — a Kafka cluster silently failing to coordinate consumer groups, a load balancer timing out idle WebSocket connections, and a presigned-URL signing bug from an AWS SDK default — each one root-caused against the live AWS environment rather than guessed at.",
   },
   "e-wallet-platform": {
     subtitle: "Backend architecture, AI features, and the delivery pipeline behind a cross-platform wallet app",
